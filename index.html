@@ -1,76 +1,189 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login Siigo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GLB Ingenieros | Login</title>
   <style>
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
       background: url('fondo_glb_ingenierio.png') no-repeat center center fixed;
       background-size: cover;
-      font-family: Arial, sans-serif;
+      display:flex; justify-content:center; align-items:center; height:100vh;
     }
-    .login-container {
+    .container {
       width: 350px;
-      margin: 100px auto;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      text-align: center;
+      background: rgba(255,255,255,0.92);
+      border: 3px solid #006d5b;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      padding: 30px 25px; text-align:center; transition: all .3s;
     }
-    h2 {
-      margin-bottom: 20px;
-      color: #333;
-    }
-    input, button {
-      width: 90%;
-      padding: 12px;
-      margin: 10px 0;
-     ;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    button:hover {
-      background: #45a049;
-    }
-    #result {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #333;
-      word-wrap: break-word;
-    }
+    h2 { color:#007c89; margin-bottom:20px; font-size:22px; }
+    input { width:90%; padding:12px; margin:10px 0; border:1px solid #ccc; border-radius:5px; font-size:14px; transition:.3s; }
+    input:focus { border-color:#007c89; outline:none; box-shadow:0 0 5px rgba(0,124,137,.5); }
+    button { width:95%; padding:12px; background:#006d5b; color:#fff; border:none; border-radius:5px; font-size:15px; cursor:pointer; margin-top:10px; transition:background .3s; }
+    button:hover { background:#009c86; }
+    .toggle-form { margin-top:15px; font-size:14px; color:#007c89; }
+    .toggle-form a { color:#006d5b; font-weight:bold; text-decoration:none; cursor:pointer; }
+    .hidden { display:none; }
+    #register-msg { margin-top:10px; font-family:Arial, sans-serif; font-size:13px; min-height:18px; }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>Acceso Siigo</h2>
-    <form id="loginForm">
-      <input type="text" name="username" placeholder="Usuario API" required><br>
-      <input type="password" name="password" placeholder="Access Key" required><br>
+
+  <!-- Login -->
+  <div class="container" id="login-form">
+    <h2>Acceso a Siigo</h2>
+    <form onsubmit="event.preventDefault(); login();">
+      <input type="text" id="username" placeholder="Usuario Siigo / email / nombre" required>
+      <input type="password" id="password" placeholder="Clave de acceso" required>
       <button type="submit">Ingresar</button>
     </form>
-    <div id="result"></div>
+    <div class="toggle-form">
+      ¿Eres nuevo? <a onclick="toggleForms()">Regístrate aquí</a>
+    </div>
   </div>
 
-  <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target).entries());
-      try {
-        const response = await fetch('https://TU-N8N/webhook/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        document.getElementById('result').innerText = JSON.stringify(result, null, 2);
-      } catch (error) {
-        document.getElementById('result').innerText = 'Error en la conexión';
-      }
+  <!-- Registro -->
+  <div class="container hidden" id="register-form">
+    <h2>Registro de Usuario</h2>
+    <form id="form-register">
+      <input type="text" id="reg-nombre" placeholder="Nombre completo" required>
+      <input type="email" id="reg-email" placeholder="Correo electrónico" required>
+      <input type="text" id="reg-usuario" placeholder="Nombre de usuario (ej: miguel123)" required>
+      <input type="password" id="reg-clave" placeholder="Crea una clave de acceso" required>
+      <button type="submit" id="btn-registrar">Registrar</button>
+    </form>
+    <div class="toggle-form">
+      ¿Ya tienes cuenta? <a id="link-login" style="cursor:pointer">Inicia sesión</a>
+    </div>
+    <div id="register-msg"></div>
+  </div>
+
+<script>
+  function toggleForms(){
+    document.getElementById('login-form').classList.toggle('hidden');
+    document.getElementById('register-form').classList.toggle('hidden');
+  }
+
+  // Login: primero intenta con usuarios en localStorage, si no existe intenta el webhook remoto
+  async function login(){
+    const usernameRaw = document.getElementById('username').value || '';
+    const password = (document.getElementById('password').value || '');
+    const username = usernameRaw.trim();
+
+    console.log('Intento login para:', username);
+
+    // revisar usuarios locales
+    let usuarios = JSON.parse(localStorage.getItem('usuarios_local') || '[]');
+
+    // buscar match por usuario, email o nombre (case-insensitive)
+    const match = usuarios.find(u => {
+      if (!u) return false;
+      const uUsuario = (u.usuario||'').toLowerCase();
+      const uEmail = (u.email||'').toLowerCase();
+      const uNombre = (u.nombre||'').toLowerCase();
+      const q = username.toLowerCase();
+      return (uUsuario === q) || (uEmail === q) || (uNombre === q);
     });
-  </script>
+
+    if (match) {
+      console.log('Usuario encontrado en localStorage:', match);
+      if (match.clave === password) {
+        // simular token local
+        localStorage.setItem('access_token', 'local-token-' + Date.now());
+        localStorage.setItem('token_expiry', Date.now() + 3600 * 1000); // 1 hora demo
+        alert('✅ Acceso correcto (usuario local)');
+        window.location.href = 'dashboard.html';
+        return;
+      } else {
+        alert('❌ Contraseña incorrecta para el usuario local');
+        return;
+      }
+    }
+
+    // Si no existe localmente, intentar con el servidor remotos (fallback)
+    try {
+      const response = await fetch('https://fabicolorado.app.n8n.cloud/webhook/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(()=>null);
+        console.warn('Respuesta del servidor no OK:', response.status, text);
+        throw new Error('Error de autenticación remota');
+      }
+
+      const data = await response.json();
+      if (!data || !data.access_token) throw new Error('Respuesta remota sin token');
+
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('token_expiry', Date.now() + (data.expires_in * 1000 || 3600*1000));
+
+      alert('✅ Acceso correcto (servidor)');
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      console.error('Error login remoto:', err);
+      alert('❌ Usuario o contraseña incorrectos y usuario no registrado localmente.');
+    }
+  }
+
+  // Registrar: guarda en localStorage para pruebas (normalmente enviarías al servidor)
+  function registrar(){
+    const nombre = (document.getElementById('reg-nombre').value || '').trim();
+    const email = (document.getElementById('reg-email').value || '').trim().toLowerCase();
+    const usuario = (document.getElementById('reg-usuario').value || '').trim().toLowerCase();
+    const clave = (document.getElementById('reg-clave').value || '');
+
+    const msgEl = document.getElementById('register-msg');
+
+    if (!nombre || !email || !usuario || !clave) {
+      msgEl.style.color = "red";
+      msgEl.innerText = "⚠️ Todos los campos son obligatorios";
+      return;
+    }
+
+    let usuarios = JSON.parse(localStorage.getItem('usuarios_local') || '[]');
+
+    // Comprobación case-insensitive
+    if (usuarios.find(u => (u.usuario || '').toLowerCase() === usuario || (u.email || '').toLowerCase() === email)) {
+      msgEl.style.color = "red";
+      msgEl.innerText = "⚠️ Usuario o correo ya existe";
+      return;
+    }
+
+    usuarios.push({ nombre, email, usuario, clave });
+    localStorage.setItem('usuarios_local', JSON.stringify(usuarios));
+
+    msgEl.style.color = "green";
+    msgEl.innerText = "✅ Registro exitoso. Ahora inicia sesión.";
+
+    // limpiar formulario
+    document.getElementById('form-register').reset();
+
+    setTimeout(() => {
+      msgEl.innerText = "";
+      toggleForms();
+    }, 1200);
+  }
+
+  // vincular eventos
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btn-registrar").addEventListener("click", (e) => {
+      e.preventDefault();
+      registrar();
+    });
+
+    document.getElementById("link-login").addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleForms();
+    });
+  });
+</script>
 </body>
 </html>
