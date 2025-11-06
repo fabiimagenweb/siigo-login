@@ -77,6 +77,9 @@ POST /facturas con action (create, list, get) y access_token.
 Productos
 
 POST /productos con access_token.
+## Despliegue
+
+Puedes ver la aplicación en vivo aquí: [GLB Ingenieros Login](https://fabiimagenweb.github.io/siigo-login/)
 
 *** NOTAS ***
 
